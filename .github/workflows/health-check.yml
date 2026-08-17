@@ -11,7 +11,7 @@ jobs:
     name: Verify Production
     runs-on: ubuntu-latest
     environment: utilCICD
-    
+
     steps:
       - name: Health Check
         uses: appleboy/ssh-action@v1.2.2
@@ -27,6 +27,13 @@ jobs:
             echo "Waiting for application..."
 
             sleep 5
+
+            echo "Loading Node.js and PM2..."
+
+            export PATH="/home/administrator/.nvm/versions/node/v24.14.0/bin:$PATH"
+
+            node -v
+            pm2 -v
 
             echo "Checking PM2..."
 
