@@ -68,7 +68,7 @@ const quickActions = [
     href: "/video-courses/new",
   },
   {
-    title: "Add VPS Guide",
+    title: "Add VPS Guide Free",
     description: "Create a practical deployment guide",
     icon: Monitor,
     href: "/guides/new",

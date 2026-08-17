@@ -1,0 +1,83 @@
+name: Production CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+
+  # 1. NPM AUDIT
+  audit:
+    name: 1️⃣ NPM Audit
+    uses: ./.github/workflows/security.yml
+
+
+  # 2. SECRET SCAN
+  secrets:
+    name: 2️⃣ Secret Scan
+    needs: audit
+    uses: ./.github/workflows/secrets.yml
+
+
+  # 3. CODEQL
+  codeql:
+    name: 3️⃣ CodeQL Security Scan
+    needs: secrets
+    uses: ./.github/workflows/codeql.yml
+
+
+  # 4. CODE QUALITY
+  quality:
+    name: 4️⃣ Code Quality
+    needs: codeql
+    uses: ./.github/workflows/quality.yml
+
+
+  # 5. PRODUCTION BUILD
+  build:
+    name: 5️⃣ Production Build
+    needs: quality
+    uses: ./.github/workflows/build.yml
+
+
+  # 6. FINAL APPROVAL
+  approval:
+    name: 6️⃣ Production Approval
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: utilCICD
+
+    steps:
+      - name: Production Approval
+        run: |
+          echo "All security and quality checks passed."
+          echo "Production deployment approved."
+          echo "Commit: $GITHUB_SHA"
+
+
+  # 7. DEPLOY
+  deploy:
+    name: 7️⃣ Production Deployment
+    needs: approval
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy.yml \
+            --repo adminskylite/utility \
+            --ref main \
+            -f commit_sha="${GITHUB_SHA}"
