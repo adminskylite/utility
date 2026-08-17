@@ -1,0 +1,141 @@
+name: Security Check
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  audit:
+    name: NPM Security Audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: internal
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: internal/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run NPM Audit
+        run: |
+          npm audit --json > npm-audit.json || true
+
+      - name: Generate Security Report
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const data = JSON.parse(
+            fs.readFileSync("npm-audit.json", "utf8")
+          );
+
+          const vulnerabilities =
+            data.metadata?.vulnerabilities || {};
+
+          const critical = vulnerabilities.critical || 0;
+          const high = vulnerabilities.high || 0;
+          const moderate = vulnerabilities.moderate || 0;
+          const low = vulnerabilities.low || 0;
+          const info = vulnerabilities.info || 0;
+
+          const total =
+            critical +
+            high +
+            moderate +
+            low +
+            info;
+
+          let status = "CLEAN";
+
+          if (critical > 0 || high > 0) {
+            status = "HIGH RISK";
+          } else if (moderate > 0 || low > 0) {
+            status = "VULNERABILITIES FOUND";
+          }
+
+          const report = `
+          # NPM Security Audit
+
+          ## Status
+
+          **${status}**
+
+          ## Vulnerability Summary
+
+          | Severity | Count |
+          |----------|------:|
+          | Critical | ${critical} |
+          | High | ${high} |
+          | Moderate | ${moderate} |
+          | Low | ${low} |
+          | Info | ${info} |
+          | **Total** | **${total}** |
+
+          ## Deployment Information
+
+          | Property | Value |
+          |----------|-------|
+          | Repository | ${process.env.GITHUB_REPOSITORY} |
+          | Branch | ${process.env.GITHUB_REF_NAME} |
+          | Commit | \`${process.env.GITHUB_SHA}\` |
+          | Node | 24 |
+
+          ## Decision
+
+          Review the audit results and approve or reject the deployment using the **utilCICD** environment approval.
+
+          > The complete JSON audit report is available in the workflow artifacts.
+          `;
+
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            report
+          );
+          NODE
+
+      - name: Upload NPM Audit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ github.sha }}
+          path: internal/npm-audit.json
+          retention-days: 30
+
+  approval:
+    name: Deployment Approval
+    needs: audit
+    runs-on: ubuntu-latest
+
+    environment:
+      name: utilCICD
+
+    steps:
+      - name: Security Check Approved
+        run: |
+          echo "================================"
+          echo "Security check approved"
+          echo "================================"
+          echo "Commit: $GITHUB_SHA"
+
+      - name: Trigger Deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy.yml \
+            --ref main \
+            -f commit_sha="${GITHUB_SHA}"

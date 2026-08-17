@@ -1,19 +1,109 @@
+# name: Deploy Next.js Frontend
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     environment: utilCICD
+
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
+
+#       - name: Deploy to VPS
+#         uses: appleboy/ssh-action@v1.2.2
+#         with:
+#           host: ${{ secrets.VPS_HOST }}
+#           username: ${{ secrets.VPS_USER }}
+#           key: ${{ secrets.VPS_SSH_KEY }}
+#           port: ${{ secrets.VPS_PORT }}
+
+#           script: |
+#             set -e
+
+#             echo "=============================="
+#             echo "Moving to project directory"
+#             echo "=============================="
+
+#             cd /home/administrator/business/utility/utility/internal
+
+#             echo "=============================="
+#             echo "Pulling latest code"
+#             echo "=============================="
+
+#             git fetch origin
+#             git reset --hard origin/main
+
+#             echo "=============================="
+#             echo "Creating .env.local"
+#             echo "=============================="
+
+#             cat > .env.local << 'EOF'
+#             ENV_LOCAL=${{ secrets.ENV_LOCAL }}
+#             EOF
+
+#             echo "=============================="
+#             echo "Loading Node via NVM"
+#             echo "=============================="
+
+#             export PATH="/home/administrator/.nvm/versions/node/v24.14.0/bin:$PATH"
+
+#             node -v
+#             npm -v
+
+#             echo "=============================="
+#             echo "Installing Dependencies"
+#             echo "=============================="
+
+#             npm install
+
+#             echo "=============================="
+#             echo "Building Next.js"
+#             echo "=============================="
+
+#             npm run build
+
+#             echo "=============================="
+#             echo "Restarting PM2"
+#             echo "=============================="
+
+#             if pm2 describe util > /dev/null
+#             then
+#               pm2 restart util
+#             else
+#               pm2 start npm --name util -- start
+#             fi
+
+#             pm2 save
+
+#             echo "=============================="
+#             echo "Deployment Successful"
+#             echo "=============================="
+
+
 name: Deploy Next.js Frontend
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Approved commit SHA"
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
+    name: Deploy to VPS
     runs-on: ubuntu-latest
-    environment: utilCICD
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -32,11 +122,25 @@ jobs:
             cd /home/administrator/business/utility/utility/internal
 
             echo "=============================="
-            echo "Pulling latest code"
+            echo "Fetching latest code"
             echo "=============================="
 
-            git fetch origin
-            git reset --hard origin/main
+            git fetch origin main
+
+            echo "=============================="
+            echo "Checking approved commit"
+            echo "=============================="
+
+            git cat-file -t ${{ inputs.commit_sha }}
+
+            echo "Approved Commit:"
+            echo "${{ inputs.commit_sha }}"
+
+            echo "=============================="
+            echo "Resetting to approved commit"
+            echo "=============================="
+
+            git reset --hard ${{ inputs.commit_sha }}
 
             echo "=============================="
             echo "Creating .env.local"
@@ -83,3 +187,6 @@ jobs:
             echo "=============================="
             echo "Deployment Successful"
             echo "=============================="
+
+            echo "Deployed Commit:"
+            git rev-parse HEAD
