@@ -193,16 +193,124 @@
 #             git rev-parse HEAD
 
 
+# name: Production Deployment
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       commit_sha:
+#         description: "Approved commit SHA"
+#         required: true
+#         type: string
+
+# permissions:
+#   contents: read
+
+# jobs:
+#   deploy:
+#     name: Deploy to VPS
+#     runs-on: ubuntu-latest
+#     environment: utilCICD
+#     steps:
+#       - name: Deploy to VPS
+#         uses: appleboy/ssh-action@v1.2.2
+#         with:
+#           host: ${{ secrets.VPS_HOST }}
+#           username: ${{ secrets.VPS_USER }}
+#           key: ${{ secrets.VPS_SSH_KEY }}
+#           port: ${{ secrets.VPS_PORT }}
+
+#           script: |
+#             set -e
+
+#             PROJECT="/home/administrator/business/utility/utility/internal"
+#             BACKUP_DIR="/home/administrator/deployment-backups"
+
+#             cd "$PROJECT"
+
+#             echo "=============================="
+#             echo "Saving Current Production Commit"
+#             echo "=============================="
+
+#             CURRENT_COMMIT=$(git rev-parse HEAD)
+
+#             echo "Current Production Commit:"
+#             echo "$CURRENT_COMMIT"
+
+#             mkdir -p "$BACKUP_DIR"
+
+#             echo "$CURRENT_COMMIT" > "$BACKUP_DIR/previous_commit"
+
+#             echo "=============================="
+#             echo "Fetching Approved Commit"
+#             echo "=============================="
+
+#             git fetch origin main
+
+#             git cat-file -t "${{ inputs.commit_sha }}"
+
+#             echo "Approved Commit:"
+#             echo "${{ inputs.commit_sha }}"
+
+#             echo "=============================="
+#             echo "Deploying Approved Commit"
+#             echo "=============================="
+
+#             git reset --hard "${{ inputs.commit_sha }}"
+
+#             echo "=============================="
+#             echo "Creating Environment"
+#             echo "=============================="
+
+#             cat > .env.local << 'EOF'
+#             ENV_LOCAL=${{ secrets.ENV_LOCAL }}
+#             EOF
+
+#             echo "=============================="
+#             echo "Loading Node.js"
+#             echo "=============================="
+
+#             export PATH="/home/administrator/.nvm/versions/node/v24.14.0/bin:$PATH"
+
+#             node -v
+#             npm -v
+
+#             echo "=============================="
+#             echo "Installing Dependencies"
+#             echo "=============================="
+
+#             npm ci
+
+#             echo "=============================="
+#             echo "Building Next.js"
+#             echo "=============================="
+
+#             npm run build
+
+#             echo "=============================="
+#             echo "Restarting PM2"
+#             echo "=============================="
+
+#             if pm2 describe util > /dev/null 2>&1
+#             then
+#               pm2 restart util
+#             else
+#               pm2 start npm --name util -- start
+#             fi
+
+#             pm2 save
+
+#             echo "=============================="
+#             echo "Deployment Completed"
+#             echo "=============================="
+
+#             echo "Deployed Commit:"
+#             git rev-parse HEAD
 name: Production Deployment
 
 on:
-  workflow_dispatch:
-    inputs:
-      commit_sha:
-        description: "Approved commit SHA"
-        required: true
-        type: string
-        
+  workflow_call:
+
 permissions:
   contents: read
 
@@ -211,8 +319,9 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     environment: utilCICD
+    
     steps:
-      - name: Deploy to VPS
+      - name: Deploy Approved Commit
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -224,72 +333,38 @@ jobs:
             set -e
 
             PROJECT="/home/administrator/business/utility/utility/internal"
-            BACKUP_DIR="/home/administrator/deployment-backups"
 
             cd "$PROJECT"
 
-            echo "=============================="
-            echo "Saving Current Production Commit"
-            echo "=============================="
-
-            CURRENT_COMMIT=$(git rev-parse HEAD)
-
-            echo "Current Production Commit:"
-            echo "$CURRENT_COMMIT"
-
-            mkdir -p "$BACKUP_DIR"
-
-            echo "$CURRENT_COMMIT" > "$BACKUP_DIR/previous_commit"
-
-            echo "=============================="
-            echo "Fetching Approved Commit"
-            echo "=============================="
+            echo "Fetching latest code..."
 
             git fetch origin main
 
-            git cat-file -t "${{ inputs.commit_sha }}"
+            echo "Deploying commit:"
+            echo "$GITHUB_SHA"
 
-            echo "Approved Commit:"
-            echo "${{ inputs.commit_sha }}"
+            git reset --hard "$GITHUB_SHA"
 
-            echo "=============================="
-            echo "Deploying Approved Commit"
-            echo "=============================="
-
-            git reset --hard "${{ inputs.commit_sha }}"
-
-            echo "=============================="
-            echo "Creating Environment"
-            echo "=============================="
+            echo "Creating environment..."
 
             cat > .env.local << 'EOF'
             ENV_LOCAL=${{ secrets.ENV_LOCAL }}
             EOF
-
-            echo "=============================="
-            echo "Loading Node.js"
-            echo "=============================="
 
             export PATH="/home/administrator/.nvm/versions/node/v24.14.0/bin:$PATH"
 
             node -v
             npm -v
 
-            echo "=============================="
-            echo "Installing Dependencies"
-            echo "=============================="
+            echo "Installing dependencies..."
 
             npm ci
 
-            echo "=============================="
-            echo "Building Next.js"
-            echo "=============================="
+            echo "Building application..."
 
             npm run build
 
-            echo "=============================="
-            echo "Restarting PM2"
-            echo "=============================="
+            echo "Restarting PM2..."
 
             if pm2 describe util > /dev/null 2>&1
             then
@@ -300,9 +375,4 @@ jobs:
 
             pm2 save
 
-            echo "=============================="
-            echo "Deployment Completed"
-            echo "=============================="
-
-            echo "Deployed Commit:"
-            git rev-parse HEAD
+            echo "Production deployment completed."

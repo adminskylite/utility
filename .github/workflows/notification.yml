@@ -1,0 +1,21 @@
+name: Deployment Notifications
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  notification:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    environment: utilCICD
+    
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "Deployment workflow completed."
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"

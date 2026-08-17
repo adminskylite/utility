@@ -1,4 +1,90 @@
-name: Production CI Pipeline
+# name: Production CI Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+#   pull_request:
+#     branches:
+#       - main
+
+# permissions:
+#   contents: read
+#   security-events: write
+#   actions: write
+
+# jobs:
+
+#   # 1. NPM AUDIT
+#   audit:
+#     name: 1️⃣ NPM Audit
+#     uses: ./.github/workflows/security.yml
+
+
+#   # 2. SECRET SCAN
+#   secrets:
+#     name: 2️⃣ Secret Scan
+#     needs: audit
+#     uses: ./.github/workflows/secrets.yml
+
+
+#   # 3. CODEQL
+#   codeql:
+#     name: 3️⃣ CodeQL Security Scan
+#     needs: secrets
+#     uses: ./.github/workflows/codeql.yml
+
+
+# #   # 4. CODE QUALITY
+# #   quality:
+# #     name: 4️⃣ Code Quality
+# #     needs: codeql
+# #     uses: ./.github/workflows/quality.yml
+
+
+#   # 5. PRODUCTION BUILD
+#   build:
+#     name: 5️⃣ Production Build
+#     needs: secrets
+#     uses: ./.github/workflows/build.yml
+
+
+#   # 6. FINAL APPROVAL
+#   approval:
+#     name: 6️⃣ Production Approval
+#     needs: build
+#     runs-on: ubuntu-latest
+
+#     environment:
+#       name: utilCICD
+
+#     steps:
+#       - name: Production Approval
+#         run: |
+#           echo "All security and quality checks passed."
+#           echo "Production deployment approved."
+#           echo "Commit: $GITHUB_SHA"
+
+
+#   # 7. DEPLOY
+#   deploy:
+#     name: 7️⃣ Production Deployment
+#     needs: approval
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Trigger Deployment
+#         env:
+#           GH_TOKEN: ${{ github.token }}
+#         run: |
+#           gh workflow run deploy.yml \
+#             --repo adminskylite/utility \
+#             --ref main \
+#             -f commit_sha="${GITHUB_SHA}"
+
+
+name: Production CI/CD
 
 on:
   push:
@@ -12,73 +98,113 @@ on:
 permissions:
   contents: read
   security-events: write
-  actions: write
-  
+  actions: read
+
+concurrency:
+  group: production-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
 
-  # 1. NPM AUDIT
   audit:
-    name: 1️⃣ NPM Audit
+    name: 1. NPM Audit
     uses: ./.github/workflows/security.yml
 
-
-  # 2. SECRET SCAN
   secrets:
-    name: 2️⃣ Secret Scan
+    name: 2. Secret Scan
     needs: audit
     uses: ./.github/workflows/secrets.yml
 
-
-  # 3. CODEQL
   codeql:
-    name: 3️⃣ CodeQL Security Scan
+    name: 3. CodeQL
     needs: secrets
     uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
 
-
-#   # 4. CODE QUALITY
 #   quality:
-#     name: 4️⃣ Code Quality
+#     name: 4. Code Quality
 #     needs: codeql
 #     uses: ./.github/workflows/quality.yml
 
-
-  # 5. PRODUCTION BUILD
   build:
-    name: 5️⃣ Production Build
+    name: 5. Production Build
     needs: secrets
     uses: ./.github/workflows/build.yml
 
-
-  # 6. FINAL APPROVAL
-  approval:
-    name: 6️⃣ Production Approval
+  sbom:
+    name: 6. SBOM
     needs: build
+    uses: ./.github/workflows/sbom.yml
+
+  approval:
+    name: 7. Production Approval
+    needs: sbom
     runs-on: ubuntu-latest
 
     environment:
       name: utilCICD
 
     steps:
-      - name: Production Approval
+      - name: Production Approved
         run: |
-          echo "All security and quality checks passed."
+          echo "All production gates passed."
           echo "Production deployment approved."
           echo "Commit: $GITHUB_SHA"
 
-
-  # 7. DEPLOY
-  deploy:
-    name: 7️⃣ Production Deployment
+  backup:
+    name: 8. Production Backup
     needs: approval
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/backup.yml
+    secrets: inherit
 
-    steps:
-      - name: Trigger Deployment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run deploy.yml \
-            --repo adminskylite/utility \
-            --ref main \
-            -f commit_sha="${GITHUB_SHA}"
+  deploy:
+    name: 9. Production Deployment
+    needs: backup
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+
+  health:
+    name: 10. Production Health Check
+    needs: deploy
+    uses: ./.github/workflows/health-check.yml
+    secrets: inherit
+
+  rollback:
+    name: 11. Automatic Rollback
+    needs:
+      - deploy
+      - health
+    if: |
+      always() &&
+      (
+        needs.deploy.result == 'failure' ||
+        needs.health.result == 'failure'
+      )
+    uses: ./.github/workflows/rollback.yml
+    secrets: inherit
+
+  report:
+    name: 12. Deployment Report
+    needs:
+      - audit
+      - secrets
+      - codeql
+      - build
+      - sbom
+      - approval
+      - backup
+      - deploy
+      - health
+      - rollback
+    if: always()
+    uses: ./.github/workflows/report.yml
+
+  notification:
+    name: 13. Deployment Notification
+    needs:
+      - report
+    if: always()
+    uses: ./.github/workflows/notifications.yml
+    secrets: inherit

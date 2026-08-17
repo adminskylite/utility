@@ -73,6 +73,12 @@ const quickActions = [
     icon: Monitor,
     href: "/guides/new",
   },
+  {
+    title: "Add New CICD Lab",
+    description: "Create a practical deployment guide",
+    icon: Monitor,
+    href: "/guides/new",
+  },
 ];
 
 const recentContent = [

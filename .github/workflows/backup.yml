@@ -1,0 +1,53 @@
+name: Production Backup
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Backup Current Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Production Backup
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+
+          script: |
+            set -e
+
+            PROJECT="/home/administrator/business/utility/utility/internal"
+            BACKUP="/home/administrator/deployment-backups"
+
+            mkdir -p "$BACKUP"
+
+            cd "$PROJECT"
+
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+
+            TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+            RELEASE_DIR="$BACKUP/$TIMESTAMP"
+
+            mkdir -p "$RELEASE_DIR"
+
+            echo "$CURRENT_COMMIT" > "$RELEASE_DIR/commit.txt"
+
+            if [ -d ".next" ]; then
+              tar -czf "$RELEASE_DIR/next.tar.gz" .next
+            fi
+
+            cat > "$RELEASE_DIR/metadata.txt" << EOF
+            Timestamp: $TIMESTAMP
+            Commit: $CURRENT_COMMIT
+            Host: $(hostname)
+            EOF
+
+            echo "Backup created:"
+            echo "$RELEASE_DIR"

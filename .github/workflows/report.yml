@@ -1,0 +1,43 @@
+name: Deployment Report
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Generate Deployment Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate Report
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+
+          # Production Deployment Report
+
+          | Stage | Status |
+          |---|---|
+          | NPM Audit | ${{ needs.audit.result }} |
+          | Secret Scan | ${{ needs.secrets.result }} |
+          | CodeQL | ${{ needs.codeql.result }} |
+          | Code Quality | ${{ needs.quality.result }} |
+          | Build | ${{ needs.build.result }} |
+          | SBOM | ${{ needs.sbom.result }} |
+          | Approval | ${{ needs.approval.result }} |
+          | Backup | ${{ needs.backup.result }} |
+          | Deployment | ${{ needs.deploy.result }} |
+          | Health Check | ${{ needs.health.result }} |
+          | Rollback | ${{ needs.rollback.result }} |
+
+          ## Deployment Information
+
+          - Repository: `${{ github.repository }}`
+          - Branch: `${{ github.ref_name }}`
+          - Commit: `${{ github.sha }}`
+          - Actor: `${{ github.actor }}`
+          - Run: `${{ github.run_number }}`
+
+          EOF
