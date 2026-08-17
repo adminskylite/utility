@@ -30,4 +30,107 @@ jobs:
         run: npm ci
 
       - name: Run NPM Audit
-        run: npm audit --audit-level=high
+        run: |
+          npm audit --json > npm-audit.json || true
+
+      - name: Generate Security Report
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const data = JSON.parse(
+            fs.readFileSync("npm-audit.json", "utf8")
+          );
+
+          const vulnerabilities =
+            data.metadata?.vulnerabilities || {};
+
+          const critical = vulnerabilities.critical || 0;
+          const high = vulnerabilities.high || 0;
+          const moderate = vulnerabilities.moderate || 0;
+          const low = vulnerabilities.low || 0;
+          const info = vulnerabilities.info || 0;
+
+          const total =
+            critical +
+            high +
+            moderate +
+            low +
+            info;
+
+          const status =
+            critical > 0 || high > 0
+              ? "❌ HIGH RISK"
+              : total > 0
+              ? "⚠️ VULNERABILITIES FOUND"
+              : "✅ CLEAN";
+
+          const report = `
+          # NPM Security Audit
+
+          ## Status
+
+          **${status}**
+
+          ## Vulnerability Summary
+
+          | Severity | Count |
+          |----------|------:|
+          | 🔴 Critical | ${critical} |
+          | 🟠 High | ${high} |
+          | 🟡 Moderate | ${moderate} |
+          | 🔵 Low | ${low} |
+          | ⚪ Info | ${info} |
+          | **Total** | **${total}** |
+
+          ## Build Information
+
+          | Property | Value |
+          |----------|-------|
+          | Repository | ${process.env.GITHUB_REPOSITORY} |
+          | Branch | ${process.env.GITHUB_REF_NAME} |
+          | Commit | \`${process.env.GITHUB_SHA}\` |
+          | Node.js | 24 |
+
+          ## Decision
+
+          The deployment should proceed only after reviewing this security report.
+          `;
+
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            report
+          );
+          NODE
+
+      - name: Upload NPM Audit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: internal/npm-audit.json
+          retention-days: 30
+
+      - name: Enforce Security Policy
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const data = JSON.parse(
+            fs.readFileSync("npm-audit.json", "utf8")
+          );
+
+          const vulnerabilities =
+            data.metadata?.vulnerabilities || {};
+
+          const critical = vulnerabilities.critical || 0;
+          const high = vulnerabilities.high || 0;
+
+          if (critical > 0 || high > 0) {
+            console.error(
+              `Security check failed: ${critical} critical, ${high} high vulnerabilities found.`
+            );
+            process.exit(1);
+          }
+
+          console.log("Security policy passed.");
+          NODE

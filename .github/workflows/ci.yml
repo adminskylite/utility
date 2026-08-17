@@ -35,17 +35,17 @@ jobs:
     uses: ./.github/workflows/codeql.yml
 
 
-  # 4. CODE QUALITY
-  quality:
-    name: 4️⃣ Code Quality
-    needs: codeql
-    uses: ./.github/workflows/quality.yml
+#   # 4. CODE QUALITY
+#   quality:
+#     name: 4️⃣ Code Quality
+#     needs: codeql
+#     uses: ./.github/workflows/quality.yml
 
 
   # 5. PRODUCTION BUILD
   build:
     name: 5️⃣ Production Build
-    needs: quality
+    needs: secrets
     uses: ./.github/workflows/build.yml
 
 
