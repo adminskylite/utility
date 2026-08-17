@@ -10,7 +10,8 @@ jobs:
   health:
     name: Verify Production
     runs-on: ubuntu-latest
-
+    environment: utilCICD
+    
     steps:
       - name: Health Check
         uses: appleboy/ssh-action@v1.2.2

@@ -173,19 +173,19 @@ jobs:
     uses: ./.github/workflows/health-check.yml
     secrets: inherit
 
-  rollback:
-    name: 11. Automatic Rollback
-    needs:
-      - deploy
-      - health
-    if: |
-      always() &&
-      (
-        needs.deploy.result == 'failure' ||
-        needs.health.result == 'failure'
-      )
-    uses: ./.github/workflows/rollback.yml
-    secrets: inherit
+#   rollback:
+#     name: 11. Automatic Rollback
+#     needs:
+#       - deploy
+#       - health
+#     if: |
+#       always() &&
+#       (
+#         needs.deploy.result == 'failure' ||
+#         needs.health.result == 'failure'
+#       )
+#     uses: ./.github/workflows/rollback.yml
+#     secrets: inherit
 
   report:
     name: 12. Deployment Report
@@ -199,7 +199,6 @@ jobs:
       - backup
       - deploy
       - health
-      - rollback
     if: always()
     uses: ./.github/workflows/report.yml
 
