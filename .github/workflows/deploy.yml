@@ -102,6 +102,7 @@ jobs:
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
+    environment: utilCICD
 
     steps:
       - name: Deploy to VPS
