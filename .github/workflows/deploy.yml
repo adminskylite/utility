@@ -202,7 +202,7 @@ on:
         description: "Approved commit SHA"
         required: true
         type: string
-
+        
 permissions:
   contents: read
 
