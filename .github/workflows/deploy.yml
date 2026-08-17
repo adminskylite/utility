@@ -310,6 +310,10 @@ name: Production Deployment
 
 on:
   workflow_call:
+    inputs:
+      commit_sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -319,7 +323,7 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     environment: utilCICD
-    
+
     steps:
       - name: Deploy Approved Commit
         uses: appleboy/ssh-action@v1.2.2
@@ -343,7 +347,7 @@ jobs:
             echo "Deploying commit:"
             echo "$GITHUB_SHA"
 
-            git reset --hard "$GITHUB_SHA"
+            git reset --hard "${{ inputs.commit_sha }}"
 
             echo "Creating environment..."
 

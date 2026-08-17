@@ -163,6 +163,8 @@ jobs:
     name: 9. Production Deployment
     needs: backup
     uses: ./.github/workflows/deploy.yml
+    with:
+        commit_sha: ${{ github.sha }}
     secrets: inherit
 
   health:
