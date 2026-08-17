@@ -12,7 +12,8 @@ on:
 permissions:
   contents: read
   security-events: write
-
+  actions: write
+  
 jobs:
 
   # 1. NPM AUDIT
