@@ -62,7 +62,7 @@ const quickActions = [
     href: "/courses/new",
   },
   {
-    title: "Link Video Course",
+    title: "Link Video Course Udemy",
     description: "Add a YouTube or hosted video course",
     icon: Video,
     href: "/video-courses/new",
