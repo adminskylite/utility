@@ -50,7 +50,7 @@ const stats = [
 
 const quickActions = [
   {
-    title: "Write Blog",
+    title: "Write New Blog",
     description: "Create and publish a new VPS article",
     icon: PenLine,
     href: "/blogs/new",
