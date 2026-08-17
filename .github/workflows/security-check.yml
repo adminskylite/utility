@@ -134,8 +134,9 @@ jobs:
 
       - name: Trigger Deployment
         env:
-          GH_TOKEN: ${{ github.token }}
+            GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run deploy.yml \
+            gh workflow run deploy.yml \
+            --repo adminskylite/utility \
             --ref main \
             -f commit_sha="${GITHUB_SHA}"
