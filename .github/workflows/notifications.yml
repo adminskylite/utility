@@ -8,12 +8,11 @@ permissions:
 
 jobs:
   notification:
-    name: Deployment Notification
     runs-on: ubuntu-latest
     environment: utilCICD
-    
+
     steps:
-      - name: Deployment Summary
+      - name: Deployment Notification
         run: |
           echo "Deployment workflow completed."
           echo "Repository: ${{ github.repository }}"
