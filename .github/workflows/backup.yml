@@ -10,7 +10,8 @@ jobs:
   backup:
     name: Backup Current Production
     runs-on: ubuntu-latest
-
+    environment: utilCICD
+    
     steps:
       - name: Create Production Backup
         uses: appleboy/ssh-action@v1.2.2
