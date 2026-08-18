@@ -41,6 +41,6 @@ jobs:
 
             echo "Checking HTTP..."
 
-            curl -f --max-time 15 http://127.0.0.1:3000 > /dev/null
+            curl -f --max-time 15 https://util.querlabs.com > /dev/null
 
             echo "Production health check PASSED."
