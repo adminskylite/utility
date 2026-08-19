@@ -59,19 +59,19 @@ const quickActions = [
     title: "Build Text Course",
     description: "Create a structured VPS learning course",
     icon: BookOpen,
-    href: "/courses/new",
+    href: "/textCourse",
   },
   {
     title: "Link Video Course Udemy",
     description: "Add a YouTube or hosted video course",
     icon: Video,
-    href: "/video-courses/new",
+    href: "/udemy",
   },
   {
     title: "Add VPS Guide Free",
     description: "Create a practical deployment guide",
     icon: Monitor,
-    href: "/guides/new",
+    href: "/blogs",
   },
   {
     title: "Add New CICD Lab",
